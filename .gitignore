@@ -1,0 +1,51 @@
+# Node/JS
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+.env
+
+# Rust / Cargo
+target/
+Cargo.lock
+
+# Data / Temp
+*.log
+*.json
+*.txt
+.DS_Store
+
+# =========================================================
+# INTERNAL FILES (not for public distribution)
+# =========================================================
+openrustswarm/
+server/
+web/
+benchmarks/
+scripts/
+docs/
+hacker_news_launch.md
+eval_*.py
+test_*.py
+medieval_demo.py
+real_10k_log_swarm.py
+CODEBASE_AUDIT.md
+*.jsonl
+
+# =========================================================
+# ALLOWLIST
+# =========================================================
+!openrustswarm-core/
+!demo/
+!dist/
+!examples/
+!.github/
+!README.md
+!LICENSE
+!CONTRIBUTING.md
+!logo.svg
+!docker-compose.yml
+!verify_all_benchmarks.py

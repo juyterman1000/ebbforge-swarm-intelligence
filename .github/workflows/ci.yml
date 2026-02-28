@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: Build
+      run: cargo build --verbose
+      working-directory: openrustswarm-core
+    - name: Run tests
+      run: cargo test --verbose
+      working-directory: openrustswarm-core

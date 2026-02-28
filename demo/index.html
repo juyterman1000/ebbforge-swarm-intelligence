@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenRustSwarm — Swarm Intelligence Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e1a;
+            --bg-panel: rgba(15, 20, 35, 0.75);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --text-bright: #f8fafc;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --accent-emerald: #10b981;
+            --caste-broker: #22d3ee;
+            --caste-selfish: #f87171;
+            --caste-neutral: #fbbf24;
+            --glow-broker: rgba(34, 211, 238, 0.6);
+            --glow-selfish: rgba(248, 113, 113, 0.4);
+            --glow-neutral: rgba(251, 191, 36, 0.3);
+            --font: 'Inter', system-ui, -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ── Canvas ────────────────────────────────── */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(ellipse at 40% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 70%),
+                        radial-gradient(ellipse at 70% 30%, rgba(139, 92, 246, 0.02) 0%, transparent 60%),
+                        var(--bg);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Subtle grid overlay */
+        #canvas-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ── Panel ─────────────────────────────────── */
+        #panel {
+            width: 340px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            border-left: 1px solid var(--border);
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        /* ── Header ────────────────────────────────── */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-mark {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .header-text h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header-text .subtitle {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
+            margin-left: auto;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent-emerald); }
+            50% { opacity: 0.5; box-shadow: 0 0 16px var(--accent-emerald); }
+        }
+
+        /* ── Metric Cards ──────────────────────────── */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            transition: all 0.25s ease;
+        }
+
+        .metric-card:hover {
+            border-color: var(--border-hover);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .metric-card.wide { grid-column: span 2; }
+
+        .metric-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .metric-val {
+            font-size: 1.6rem;
+            font-family: var(--mono);
+            font-weight: 500;
+            color: var(--text-bright);
+            letter-spacing: -0.02em;
+        }
+
+        .metric-val .unit {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            font-weight: 400;
+            margin-left: 4px;
+        }
+
+        /* ── Evolution Bar ─────────────────────────── */
+        .evolution-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .dist-bar {
+            height: 6px;
+            width: 100%;
+            border-radius: 3px;
+            display: flex;
+            overflow: hidden;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .dist-broker {
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+        }
+        .dist-neutral {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .dist-selfish {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dist-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+        }
+
+        .dist-labels span { display: flex; align-items: center; gap: 5px; }
+        .dist-labels .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* ── Tools ─────────────────────────────────── */
+        .section-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.78rem;
+            font-family: var(--font);
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .tool-btn.active {
+            background: rgba(59, 130, 246, 0.12);
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #93c5fd;
+            box-shadow: 0 0 16px rgba(59, 130, 246, 0.15),
+                        inset 0 0 12px rgba(59, 130, 246, 0.05);
+        }
+
+        .tool-icon {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* ── Legend ─────────────────────────────────── */
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .legend-dot.broker {
+            background: var(--caste-broker);
+            box-shadow: 0 0 6px var(--glow-broker);
+        }
+        .legend-dot.neutral {
+            background: var(--caste-neutral);
+            box-shadow: 0 0 4px var(--glow-neutral);
+        }
+        .legend-dot.selfish {
+            background: var(--caste-selfish);
+            box-shadow: 0 0 5px var(--glow-selfish);
+        }
+
+        /* ── Footer ────────────────────────────────── */
+        .footer {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .reset-btn {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            font-family: var(--font);
+            font-weight: 500;
+        }
+
+        .reset-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .copyright {
+            text-align: center;
+            font-size: 0.6rem;
+            color: rgba(100, 116, 139, 0.6);
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Splash ────────────────────────────────── */
+        #splash {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(5, 8, 18, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(30px);
+            animation: splash-in 0.5s ease;
+        }
+
+        @keyframes splash-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .splash-card {
+            max-width: 480px;
+            padding: 48px 40px;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(15, 20, 35, 0.98));
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5),
+                        0 0 60px rgba(99, 102, 241, 0.08);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .splash-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
+        }
+
+        .splash-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .splash-version {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: var(--mono);
+            margin-bottom: 24px;
+        }
+
+        .splash-terms {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 0.72rem;
+            color: #94a3b8;
+            line-height: 1.7;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .splash-terms strong { color: #f87171; }
+
+        .splash-enter {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border: none;
+            color: white;
+            padding: 13px 44px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font);
+            letter-spacing: 0.01em;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .splash-enter:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .splash-dmca {
+            margin-top: 20px;
+            font-size: 0.58rem;
+            color: rgba(100, 116, 139, 0.5);
+            letter-spacing: 0.04em;
+        }
+
+        /* ── FPS Counter ───────────────────────────── */
+        #fps-counter {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* ── Tooltip on canvas ─────────────────────── */
+        #canvas-tooltip {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+            background: rgba(15, 20, 35, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            font-family: var(--mono);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        /* ── Scrollbar ─────────────────────────────── */
+        #panel::-webkit-scrollbar { width: 4px; }
+        #panel::-webkit-scrollbar-track { background: transparent; }
+        #panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ════ Splash Screen ════ -->
+    <div id="splash">
+        <div class="splash-card">
+            <div class="splash-logo">⚡</div>
+            <div class="splash-title">OpenRustSwarm</div>
+            <div class="splash-version">v3.0.0 · Swarm Intelligence Engine</div>
+            <div class="splash-terms">
+                <strong>TESTING & PERSONAL USE ONLY</strong><br><br>
+                You may download, install, and run this software for personal
+                testing or evaluation purposes only.<br><br>
+                <strong>Copying, redistribution, modification, reverse engineering, or
+                commercial use is strictly prohibited.</strong><br><br>
+                All rights remain with the author. By clicking "Enter Demo"
+                you agree to these terms.
+            </div>
+            <button class="splash-enter" id="splash-accept">Enter Demo</button>
+            <div class="splash-dmca">Protected under DMCA · © 2024–2026 OpenRustSwarm</div>
+        </div>
+    </div>
+
+    <!-- ════ Main UI ════ -->
+    <div id="canvas-container">
+        <canvas id="sim"></canvas>
+        <div id="fps-counter">-- FPS</div>
+        <div id="canvas-tooltip"></div>
+    </div>
+
+    <div id="panel">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-mark">⚡</div>
+            <div class="header-text">
+                <h1>OpenRustSwarm</h1>
+                <div class="subtitle">Swarm Intelligence Engine</div>
+            </div>
+            <div class="status-dot" title="Engine Running"></div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Tick</div>
+                <div class="metric-val" id="val-tick">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Agents</div>
+                <div class="metric-val" id="val-agents">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Mean Health</div>
+                <div class="metric-val" id="val-health">1.000</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">FPS</div>
+                <div class="metric-val" id="val-fps">--</div>
+            </div>
+        </div>
+
+        <!-- Caste Evolution -->
+        <div class="evolution-section">
+            <div class="metric-label">Caste Evolution</div>
+            <div class="dist-bar">
+                <div id="bar-selfish" class="dist-selfish" style="width: 0%"></div>
+                <div id="bar-neutral" class="dist-neutral" style="width: 100%"></div>
+                <div id="bar-broker" class="dist-broker" style="width: 0%"></div>
+            </div>
+            <div class="dist-labels">
+                <span><span class="dot" style="background:var(--caste-selfish)"></span>Selfish</span>
+                <span><span class="dot" style="background:var(--caste-neutral)"></span>Neutral</span>
+                <span><span class="dot" style="background:var(--caste-broker)"></span>Broker</span>
+            </div>
+        </div>
+
+        <!-- Placement Tools -->
+        <div>
+            <div class="section-label">Placement Tools</div>
+            <div class="tools">
+                <button class="tool-btn active" id="tool-village">
+                    <span class="tool-icon">🏘</span> Village
+                </button>
+                <button class="tool-btn" id="tool-city">
+                    <span class="tool-icon">🏙</span> City
+                </button>
+                <button class="tool-btn" id="tool-ambush">
+                    <span class="tool-icon">⚠️</span> Ambush
+                </button>
+                <button class="tool-btn" id="tool-shock">
+                    <span class="tool-icon">💥</span> Shockwave
+                </button>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div>
+            <div class="section-label">Agent Castes</div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot broker"></div>
+                    Information Broker — altruistic, shares intel
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot neutral"></div>
+                    Neutral Trader — self-sustaining
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot selfish"></div>
+                    Selfish Hoarder — competitive, isolates
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <button class="reset-btn" id="btn-reset">⟲ Reset Simulation</button>
+            <div class="copyright">© 2024–2026 OpenRustSwarm · All Rights Reserved</div>
+        </div>
+    </div>
+
+    <script>
+        // ════ Splash ════
+        document.getElementById('splash-accept').addEventListener('click', () => {
+            const splash = document.getElementById('splash');
+            splash.style.opacity = '0';
+            splash.style.transition = 'opacity 0.4s ease';
+            setTimeout(() => splash.remove(), 400);
+        });
+
+        // ════ Canvas Setup ════
+        const canvas = document.getElementById('sim');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        let width, height, dpr;
+
+        const WORLD_SIZE = 1000;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            width = canvas.parentElement.clientWidth;
+            height = canvas.parentElement.clientHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ════ State ════
+        let agents = [];
+        let villages = [];
+        let cities = [];
+        let ambushes = [];
+        let shocks = [];
+        let activeTool = 'place_village';
+
+        // FPS tracking
+        let frameCount = 0;
+        let lastFpsTime = performance.now();
+        let currentFps = 0;
+
+        // ════ Tool Buttons ════
+        const toolBtns = document.querySelectorAll('.tool-btn');
+        const toolMap = {
+            'tool-village': 'place_village',
+            'tool-city': 'place_city',
+            'tool-ambush': 'place_ambush',
+            'tool-shock': 'shock'
+        };
+
+        toolBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                toolBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeTool = toolMap[btn.id];
+            });
+        });
+
+        // ════ WebSocket ════
+        const wsUrl = `ws://${window.location.host}/ws`;
+        let ws;
+
+        function connect() {
+            ws = new WebSocket(wsUrl);
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'state') {
+                    agents = data.agents;
+                    villages = data.villages;
+                    cities = data.cities;
+                    ambushes = data.ambushes;
+
+                    // Update metrics
+                    document.getElementById('val-tick').innerText = data.tick.toLocaleString();
+                    document.getElementById('val-agents').innerText = agents.length.toLocaleString();
+                    document.getElementById('val-health').innerText = data.mean_health.toFixed(3);
+
+                    // Caste distribution
+                    let broker = 0, selfish = 0, neutral = 0;
+                    agents.forEach(a => {
+                        if (a.c === 'broker') broker++;
+                        else if (a.c === 'selfish') selfish++;
+                        else neutral++;
+                    });
+                    const t = agents.length || 1;
+                    document.getElementById('bar-broker').style.width = `${(broker / t) * 100}%`;
+                    document.getElementById('bar-selfish').style.width = `${(selfish / t) * 100}%`;
+                    document.getElementById('bar-neutral').style.width = `${(neutral / t) * 100}%`;
+                }
+            };
+            ws.onclose = () => setTimeout(connect, 1000);
+            ws.onerror = () => ws.close();
+        }
+        connect();
+
+        // ════ Reset ════
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'reset' }));
+                shocks = [];
+            }
+        });
+
+        // ════ Click Interaction ════
+        canvas.addEventListener('click', (e) => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const rect = canvas.getBoundingClientRect();
+
+            const mapSize = Math.min(width, height) * 0.92;
+            const offsetX = (width - mapSize) / 2;
+            const offsetY = (height - mapSize) / 2;
+
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+
+            const worldX = ((screenX - offsetX) / mapSize) * WORLD_SIZE;
+            const worldY = ((screenY - offsetY) / mapSize) * WORLD_SIZE;
+
+            if (worldX < 0 || worldX > WORLD_SIZE || worldY < 0 || worldY > WORLD_SIZE) return;
+
+            ws.send(JSON.stringify({
+                action: activeTool,
+                payload: { x: worldX, y: worldY, radius: 80 }
+            }));
+
+            if (activeTool === 'shock') {
+                shocks.push({ x: worldX, y: worldY, radius: 0, max: 80, life: 1.0, time: 0 });
+            }
+        });
+
+        // ════ Coordinate Mapping ════
+        let mapSize, offsetX, offsetY;
+
+        function updateLayout() {
+            mapSize = Math.min(width, height) * 0.92;
+            offsetX = (width - mapSize) / 2;
+            offsetY = (height - mapSize) / 2;
+        }
+
+        function toScreenX(wx) { return offsetX + (wx / WORLD_SIZE) * mapSize; }
+        function toScreenY(wy) { return offsetY + (wy / WORLD_SIZE) * mapSize; }
+
+        // ════ Render Loop ════
+        function draw() {
+            updateLayout();
+
+            // Clear with dark fade for motion trails
+            ctx.fillStyle = 'rgba(10, 14, 26, 0.25)';
+            ctx.fillRect(0, 0, width, height);
+
+            // ── Draw subtle world boundary ──
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(offsetX, offsetY, mapSize, mapSize);
+
+            // ── Draw Location Markers ──
+            // Villages (green glow)
+            villages.forEach(v => {
+                const sx = toScreenX(v[0]), sy = toScreenY(v[1]);
+                // Glow ring
+                const vGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 28);
+                vGrad.addColorStop(0, 'rgba(16, 185, 129, 0.12)');
+                vGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = vGrad;
+                ctx.beginPath(); ctx.arc(sx, sy, 28, 0, Math.PI * 2); ctx.fill();
+                // Icon
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🏘', sx, sy);
+            });
+
+            // Cities (blue glow)
+            cities.forEach(c => {
+                const sx = toScreenX(c[0]), sy = toScreenY(c[1]);
+                const cGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 36);
+                cGrad.addColorStop(0, 'rgba(59, 130, 246, 0.12)');
+                cGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = cGrad;
+                ctx.beginPath(); ctx.arc(sx, sy, 36, 0, Math.PI * 2); ctx.fill();
+                ctx.font = '22px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🏙', sx, sy);
+            });
+
+            // Ambush zones (red pulse)
+            ambushes.forEach(a => {
+                const sx = toScreenX(a[0]), sy = toScreenY(a[1]);
+                const aGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 30);
+                aGrad.addColorStop(0, 'rgba(239, 68, 68, 0.1)');
+                aGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = aGrad;
+                ctx.beginPath(); ctx.arc(sx, sy, 30, 0, Math.PI * 2); ctx.fill();
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('⚠️', sx, sy);
+            });
+
+            // ── Draw Shockwaves ──
+            for (let i = shocks.length - 1; i >= 0; i--) {
+                const s = shocks[i];
+                s.time += 0.016;
+                s.radius += 2.5;
+                s.life -= 0.018;
+                if (s.life <= 0) { shocks.splice(i, 1); continue; }
+
+                const sx = toScreenX(s.x), sy = toScreenY(s.y);
+                const screenR = (s.radius / WORLD_SIZE) * mapSize;
+
+                // Outer ring
+                ctx.beginPath();
+                ctx.arc(sx, sy, screenR, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(239, 68, 68, ${s.life * 0.5})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Inner glow
+                const shockGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, screenR);
+                shockGrad.addColorStop(0, `rgba(239, 68, 68, ${s.life * 0.06})`);
+                shockGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = shockGrad;
+                ctx.beginPath(); ctx.arc(sx, sy, screenR, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // ── Draw Agents (batched by caste for performance) ──
+            const TWO_PI = Math.PI * 2;
+            const brokers = [], selfishArr = [], neutrals = [];
+
+            agents.forEach(a => {
+                const sx = toScreenX(a.x), sy = toScreenY(a.y);
+                if (a.c === 'broker') brokers.push([sx, sy]);
+                else if (a.c === 'selfish') selfishArr.push([sx, sy]);
+                else neutrals.push([sx, sy]);
+            });
+
+            function drawGlowBatch(group, color, glowColor, radius) {
+                if (!group.length) return;
+
+                // Glow pass (larger, transparent)
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = glowColor;
+                ctx.beginPath();
+                group.forEach(p => {
+                    ctx.moveTo(p[0] + radius * 2, p[1]);
+                    ctx.arc(p[0], p[1], radius * 2, 0, TWO_PI);
+                });
+                ctx.fill();
+
+                // Core pass (sharp dot)
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                group.forEach(p => {
+                    ctx.moveTo(p[0] + radius, p[1]);
+                    ctx.arc(p[0], p[1], radius, 0, TWO_PI);
+                });
+                ctx.fill();
+            }
+
+            drawGlowBatch(neutrals, '#fbbf24', 'rgba(251, 191, 36, 0.08)', 1.5);
+            drawGlowBatch(selfishArr, '#f87171', 'rgba(248, 113, 113, 0.10)', 1.5);
+            drawGlowBatch(brokers, '#22d3ee', 'rgba(34, 211, 238, 0.15)', 1.8);
+
+            // ── FPS Counter ──
+            frameCount++;
+            const now = performance.now();
+            if (now - lastFpsTime >= 1000) {
+                currentFps = frameCount;
+                frameCount = 0;
+                lastFpsTime = now;
+                document.getElementById('fps-counter').innerText = `${currentFps} FPS`;
+                document.getElementById('val-fps').innerText = currentFps;
+            }
+
+            requestAnimationFrame(draw);
+        }
+        draw();
+
+        // ════ Canvas Tooltip ════
+        const tooltip = document.getElementById('canvas-tooltip');
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const worldX = ((screenX - offsetX) / mapSize) * WORLD_SIZE;
+            const worldY = ((screenY - offsetY) / mapSize) * WORLD_SIZE;
+
+            if (worldX >= 0 && worldX <= WORLD_SIZE && worldY >= 0 && worldY <= WORLD_SIZE) {
+                tooltip.style.opacity = '1';
+                tooltip.style.left = (e.clientX - canvas.parentElement.getBoundingClientRect().left + 14) + 'px';
+                tooltip.style.top = (e.clientY - canvas.parentElement.getBoundingClientRect().top - 10) + 'px';
+                tooltip.innerText = `${Math.round(worldX)}, ${Math.round(worldY)}`;
+            } else {
+                tooltip.style.opacity = '0';
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.style.opacity = '0';
+        });
+    </script>
+</body>
+</html>
