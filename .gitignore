@@ -1,0 +1,73 @@
+# Node/JS
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+.env
+
+# Rust / Cargo specific
+target/
+target_*/
+Cargo.lock
+
+# Data / Temp / Logs
+qdrant_data/
+.chroma/
+*.log
+*.json
+*.txt
+*.png
+.DS_Store
+
+# =========================================================
+# PROPRIETARY SOURCE CODE PROTECTION
+# =========================================================
+
+# Ignore the entire core engine workspace (Rust & Manifests)
+openrustswarm-core/
+
+# Ignore the Python wrappers and business logic (Original source)
+openrustswarm/
+server/
+web/
+
+# Ignore development scripts and benchmarks
+benchmarks/
+scripts/
+docs/
+hacker_news_launch.md
+eval_*.py
+test_*.py
+medieval_demo.py
+real_10k_log_swarm.py
+
+# Ignore audit logs and internal evaluation data
+CODEBASE_AUDIT.md
+*eval_data*
+*.jsonl
+
+# =========================================================
+# ALLOWLIST FOR DISTRIBUTION (OVERRIDE)
+# =========================================================
+
+# We ONLY want the compiled binary and the public demo
+!openrustswarm_core.so
+!openrustswarm-*.whl
+!demo/
+!demo_server.py
+!README.md
+!LICENSE
+!logo.svg
+!demo_preview.png
+!demo_preview.webp
+!docker-compose.yml
+!openrustswarm.py
+!quick_start_test.py
+!verify_all_benchmarks.py
+!memory_calibration.py

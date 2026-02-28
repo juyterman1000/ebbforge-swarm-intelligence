@@ -1,0 +1,55 @@
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "cogops-core"
+version = "3.0.0"
+description = "High-performance AI Agent Runtime with Safety Guardrails"
+readme = "README.md"
+license = {text = "ISC"}
+authors = [
+    {name = "CogOps Team", email = "team@cogops.dev"}
+]
+keywords = [
+    "ai",
+    "agent",
+    "llm",
+    "safety",
+    "runtime",
+    "langchain",
+    "openai",
+    "autonomous",
+    "multi-agent"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: ISC License (ISCL)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.9"
+
+[project.urls]
+Homepage = "https://github.com/cogops/cogops"
+Documentation = "https://cogops.dev/docs"
+Repository = "https://github.com/cogops/cogops"
+Changelog = "https://github.com/cogops/cogops/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "maturin>=1.4",
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "cogops_core"

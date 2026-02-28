@@ -1,0 +1,38 @@
+# CogOps Storage Backends - Docker Compose
+# Start all required services for production
+
+version: '3.8'
+
+services:
+  # DragonflyDB - 25x faster Redis replacement
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: cogops-dragonfly
+    ports:
+      - "6379:6379"
+    command: --logtostderr
+    ulimits:
+      memlock: -1
+    restart: unless-stopped
+    volumes:
+      - dragonfly_data:/data
+
+  # Qdrant - Rust-native vector database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: cogops-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  dragonfly_data:
+  qdrant_data:
+
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f
+#   docker compose down
